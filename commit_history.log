@@ -1,0 +1,53 @@
+commit 4c3f2e006b0d5fffd0bd2bfae4cbf889c3bd0956
+Author: DerHammerclock <rathmerdominik@outlook.de>
+Date:   Thu Nov 23 16:20:12 2023 +0100
+
+    feat(API): Add multiple OneFruit Events
+
+commit f00e1ba7a595e40eca090263f295f2f0994cc86a
+Author: DerHammerclock <rathmerdominik@outlook.de>
+Date:   Tue Nov 14 09:21:09 2023 +0100
+
+    fix(ForgeSetup): Migrate existing Crews to add the new Creation Date
+
+commit 20a6450937e028dadd0d5b6257f9661bc062acea
+Author: rathmerdominik <rathmerdominik@outlook.de>
+Date:   Mon Nov 13 00:53:22 2023 +0100
+
+    feat(Crew): Added Crew creation date
+
+commit ec2d9cfe2a081c1f8d887669dcdeed65b8970212
+Author: rathmerdominik <rathmerdominik@outlook.de>
+Date:   Sat Nov 4 18:59:34 2023 +0100
+
+    fix(CCreateCrewPacket): Actually use the Crew Create event
+
+commit 7d5cf0c2dee2883f934032ccc3ab41d562bef31f
+Author: rathmerdominik <rathmerdominik@outlook.de>
+Date:   Fri Nov 3 23:32:52 2023 +0100
+
+    feat(CrewEvent): Add new Kick event when kicking a crew member
+
+commit c06fcbafd173348b42b3c3834c8f25aaac441886
+Author: rathmerdominik <rathmerdominik@outlook.de>
+Date:   Fri Nov 3 18:22:00 2023 +0100
+
+    fix(JollyRoger): Replace current pixel replacer with tinting
+
+commit 6b1a997983384eebdb991bf5d04a7327d90abfb7
+Author: rathmerdominik <rathmerdominik@outlook.de>
+Date:   Thu Nov 2 16:20:26 2023 +0100
+
+    feat(JollyRogerEvent): Added JollyRoger Update event
+
+commit a193cf1f1594eb764317c0d1261abe1932c51b44
+Author: rathmerdominik <rathmerdominik@outlook.de>
+Date:   Thu Nov 2 15:36:54 2023 +0100
+
+    fix(JollyRoger): Removed a debug print statement
+
+commit 00af82773dd855465460734bc8ede2e5bd44d5aa
+Author: rathmerdominik <rathmerdominik@outlook.de>
+Date:   Wed Nov 1 18:08:02 2023 +0100
+
+    feat(JollyRoger): Added possibility to get the JollyRoger as an Image
