@@ -1,6 +1,6 @@
 <h1 align = "center"> Mine Mine no Mi Modded </h1>
 
-<p align = "center"> The Mine Mine no Mi mod already features a lot of API endpoints and possibilites to extend it. </p>
+<p align = "center"> The <a href="https://www.curseforge.com/minecraft/mc-mods/mine-mine-no-mi"> Mine Mine no Mi</a> mod already features a lot of API endpoints and possibilites to extend it. </p>
 <p align = "center"> Sadly this is not enough for some Applications of mine and some Endpoints are straight up wrong, not implemented or missing. </p>
 <p align = "center"> This version features changes made by me. A diff of changes can be read below. </p>
 <p align = "center"> I am sadly not allowed to release the source code as the creator "Wynd" does not wish for it to be open to the public. </p>
