@@ -342,13 +342,14 @@ index 140381b80..c3db56207 100644
  
 diff --git a/src/main/java/xyz/pixelatedw/mineminenomi/api/events/onefruit/InventoryDevilFruitEvent.java b/src/main/java/xyz/pixelatedw/mineminenomi/api/events/onefruit/InventoryDevilFruitEvent.java
 new file mode 100644
-index 000000000..a0a1b53e7
+index 000000000..3a2e712c3
 --- /dev/null
 +++ b/src/main/java/xyz/pixelatedw/mineminenomi/api/events/onefruit/InventoryDevilFruitEvent.java
-@@ -0,0 +1,26 @@
+@@ -0,0 +1,27 @@
 +package xyz.pixelatedw.mineminenomi.api.events.onefruit;
 +
 +import javax.annotation.Nonnull;
++import javax.annotation.Nullable;
 +import net.minecraft.entity.LivingEntity;
 +import net.minecraft.item.Item;
 +import net.minecraftforge.event.entity.EntityEvent;
@@ -357,7 +358,7 @@ index 000000000..a0a1b53e7
 +private final Item devilFruit;
 +	private final String reason;
 +
-+	public InventoryDevilFruitEvent(LivingEntity entity, @Nonnull Item devilFruit,
++	public InventoryDevilFruitEvent(@Nullable LivingEntity entity, @Nonnull Item devilFruit,
 +			String reason) {
 +		super(entity);
 +		this.devilFruit = devilFruit;
@@ -374,13 +375,14 @@ index 000000000..a0a1b53e7
 +}
 diff --git a/src/main/java/xyz/pixelatedw/mineminenomi/api/events/onefruit/LostDevilFruitEvent.java b/src/main/java/xyz/pixelatedw/mineminenomi/api/events/onefruit/LostDevilFruitEvent.java
 new file mode 100644
-index 000000000..c64ace804
+index 000000000..33966ddb0
 --- /dev/null
 +++ b/src/main/java/xyz/pixelatedw/mineminenomi/api/events/onefruit/LostDevilFruitEvent.java
-@@ -0,0 +1,26 @@
+@@ -0,0 +1,27 @@
 +package xyz.pixelatedw.mineminenomi.api.events.onefruit;
 +
 +import javax.annotation.Nonnull;
++import javax.annotation.Nullable;
 +import net.minecraft.entity.LivingEntity;
 +import net.minecraft.item.Item;
 +import net.minecraftforge.event.entity.EntityEvent;
@@ -389,7 +391,7 @@ index 000000000..c64ace804
 +	private final String reason;
 +	private final Item devilFruit;
 +
-+	public LostDevilFruitEvent(LivingEntity entity, @Nonnull Item devilFruit,
++	public LostDevilFruitEvent(@Nullable LivingEntity entity, @Nonnull Item devilFruit,
 +			String reason) {
 +		super(entity);
 +		this.devilFruit = devilFruit;
@@ -490,7 +492,7 @@ index aa8b0b5c0..f6aa0b716 100644
  			
  			devilFruitProps.removeDevilFruit();
 diff --git a/src/main/java/xyz/pixelatedw/mineminenomi/data/world/ExtendedWorldData.java b/src/main/java/xyz/pixelatedw/mineminenomi/data/world/ExtendedWorldData.java
-index 391ba7c6b..97173944a 100644
+index 391ba7c6b..0daa6dbc4 100644
 --- a/src/main/java/xyz/pixelatedw/mineminenomi/data/world/ExtendedWorldData.java
 +++ b/src/main/java/xyz/pixelatedw/mineminenomi/data/world/ExtendedWorldData.java
 @@ -12,6 +12,7 @@ import javax.annotation.Nullable;
@@ -540,7 +542,7 @@ index 391ba7c6b..97173944a 100644
  		{
  			oneFruit.get().setStatusMessage(message);
 -			oneFruit.get().update(uuid, OneFruitEntry.Status.LOST);
-+			oneFruit.get().update(entity.getUUID(), OneFruitEntry.Status.LOST);
++			oneFruit.get().update(entity != null ? entity.getUUID() : null, OneFruitEntry.Status.LOST);
  			this.setDirty();
 +			
 +			LostDevilFruitEvent lostEvent = new LostDevilFruitEvent(entity, DevilFruitHelper.getDevilFruitItem(oneFruit.get().getKey()), message);

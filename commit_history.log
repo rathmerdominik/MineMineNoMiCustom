@@ -1,3 +1,9 @@
+commit dc3d4eef0970678da0397060bb3cb47a0287ae7b (HEAD -> feat/onefruit/added-events-for-all-states, origin/feat/onefruit/added-events-for-all-states)
+Author: DerHammerclock <rathmerdominik@outlook.de>
+Date:   Sun Dec 3 17:35:16 2023 +0100
+
+    fix(ExtendedWorldData): Fix NullPointer when entity is null for lostFruit function
+
 commit 4c3f2e006b0d5fffd0bd2bfae4cbf889c3bd0956
 Author: DerHammerclock <rathmerdominik@outlook.de>
 Date:   Thu Nov 23 16:20:12 2023 +0100

@@ -10,6 +10,12 @@
 <h2 align = "center"> Commit Log of changes made by myself </h2>
 
 ```log
+commit dc3d4eef0970678da0397060bb3cb47a0287ae7b (HEAD -> feat/onefruit/added-events-for-all-states, origin/feat/onefruit/added-events-for-all-states)
+Author: DerHammerclock <rathmerdominik@outlook.de>
+Date:   Sun Dec 3 17:35:16 2023 +0100
+
+    fix(ExtendedWorldData): Fix NullPointer when entity is null for lostFruit function
+
 commit 4c3f2e006b0d5fffd0bd2bfae4cbf889c3bd0956
 Author: DerHammerclock <rathmerdominik@outlook.de>
 Date:   Thu Nov 23 16:20:12 2023 +0100
@@ -400,6 +406,7 @@ rename to src/main/java/xyz/pixelatedw/mineminenomi/api/events/onefruit/EatDevil
 +package xyz.pixelatedw.mineminenomi.api.events.onefruit;
 +
 +import javax.annotation.Nonnull;
++import javax.annotation.Nullable;
 +import net.minecraft.entity.LivingEntity;
 +import net.minecraft.item.Item;
 +import net.minecraftforge.event.entity.EntityEvent;
@@ -408,7 +415,7 @@ rename to src/main/java/xyz/pixelatedw/mineminenomi/api/events/onefruit/EatDevil
 +private final Item devilFruit;
 +	private final String reason;
 +
-+	public InventoryDevilFruitEvent(LivingEntity entity, @Nonnull Item devilFruit,
++	public InventoryDevilFruitEvent(@Nullable LivingEntity entity, @Nonnull Item devilFruit,
 +			String reason) {
 +		super(entity);
 +		this.devilFruit = devilFruit;
@@ -439,7 +446,7 @@ rename to src/main/java/xyz/pixelatedw/mineminenomi/api/events/onefruit/EatDevil
 +	private final String reason;
 +	private final Item devilFruit;
 +
-+	public LostDevilFruitEvent(LivingEntity entity, @Nonnull Item devilFruit,
++	public LostDevilFruitEvent(@Nullable LivingEntity entity, @Nonnull Item devilFruit,
 +			String reason) {
 +		super(entity);
 +		this.devilFruit = devilFruit;
@@ -591,7 +598,7 @@ rename to src/main/java/xyz/pixelatedw/mineminenomi/api/events/onefruit/EatDevil
  		{
  			oneFruit.get().setStatusMessage(message);
 -			oneFruit.get().update(uuid, OneFruitEntry.Status.LOST);
-+			oneFruit.get().update(entity.getUUID(), OneFruitEntry.Status.LOST);
++			oneFruit.get().update(entity != null ? entity.getUUID() : null, OneFruitEntry.Status.LOST);
  			this.setDirty();
 +			
 +			LostDevilFruitEvent lostEvent = new LostDevilFruitEvent(entity, DevilFruitHelper.getDevilFruitItem(oneFruit.get().getKey()), message);
