@@ -742,7 +742,7 @@ index 54021e527..0d92a6d57 100644
  				}
  			}
 diff --git a/src/main/java/xyz/pixelatedw/mineminenomi/items/AkumaNoMiItem.java b/src/main/java/xyz/pixelatedw/mineminenomi/items/AkumaNoMiItem.java
-index c31a3b619..5a59133fc 100644
+index c31a3b619..a57ec8afa 100644
 --- a/src/main/java/xyz/pixelatedw/mineminenomi/items/AkumaNoMiItem.java
 +++ b/src/main/java/xyz/pixelatedw/mineminenomi/items/AkumaNoMiItem.java
 @@ -40,7 +40,7 @@ import xyz.pixelatedw.mineminenomi.api.OneFruitEntry.Status;
@@ -800,14 +800,24 @@ index c31a3b619..5a59133fc 100644
  		List<BlockPos> blockPosList = WyHelper.getNearbyTileEntities(entity.blockPosition(), entity.level, 2);
  
  		for (BlockPos pos : blockPosList)
-@@ -336,14 +337,18 @@ public class AkumaNoMiItem extends Item implements IFruitColor
+@@ -328,22 +329,27 @@ public class AkumaNoMiItem extends Item implements IFruitColor
+ 			TileEntity te = entity.level.getBlockEntity(pos);
+ 
+ 			if (te instanceof HopperTileEntity)
+-			{				
++			{
+ 				shouldRemove = true;
++				removeReason = "Thrown into hopper";
+ 				break;
+ 			}
+ 		}
  
  		List<Entity> hopperMinecarts = WyHelper.getNearbyEntities(entity.blockPosition(), entity.level, 0.5, null, HopperMinecartEntity.class);
  
 -		if(hopperMinecarts.size() > 0)
 +		if(hopperMinecarts.size() > 0) {
  			shouldRemove = true;
-+			removeReason = "Hopper in Minecraft";
++			removeReason = "Thrown into Hopper Minecart";
 +		}
  		
  		List<Entity> foxes = WyHelper.getNearbyEntities(entity.blockPosition(), entity.level, 1.5, null, FoxEntity.class);
@@ -822,7 +832,7 @@ index c31a3b619..5a59133fc 100644
  		if(shouldRemove) 
  		{
  			entity.remove();
-@@ -354,10 +359,10 @@ public class AkumaNoMiItem extends Item implements IFruitColor
+@@ -354,10 +360,10 @@ public class AkumaNoMiItem extends Item implements IFruitColor
  				if(thrower != null)
  					thrower.inventory.add(itemStack);
  				else

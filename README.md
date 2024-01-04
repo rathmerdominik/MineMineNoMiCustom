@@ -10,6 +10,12 @@
 <h2 align = "center"> Commit Log of changes made by myself </h2>
 
 ```log
+commit a3d124face9ab282d0d4f6f5f88965a29110323b (HEAD -> 0.9.5-hammer, origin/0.9.5-hammer)
+Author: DerHammerclock <rathmerdominik@outlook.de>
+Date:   Tue Dec 5 16:56:05 2023 +0100
+
+    fix(AkumaNoMiItem): Add remove reason to Hopper
+
 commit dc3d4eef0970678da0397060bb3cb47a0287ae7b (HEAD -> feat/onefruit/added-events-for-all-states, origin/feat/onefruit/added-events-for-all-states)
 Author: DerHammerclock <rathmerdominik@outlook.de>
 Date:   Sun Dec 3 17:35:16 2023 +0100
@@ -856,6 +862,17 @@ rename to src/main/java/xyz/pixelatedw/mineminenomi/api/events/onefruit/EatDevil
  		List<BlockPos> blockPosList = WyHelper.getNearbyTileEntities(entity.blockPosition(), entity.level, 2);
  
  		for (BlockPos pos : blockPosList)
+@@ -329,8 +329,9 @@ public class AkumaNoMiItem extends Item implements IFruitColor
+                        TileEntity te = entity.level.getBlockEntity(pos);
+ 
+                        if (te instanceof HopperTileEntity)
+-                       {                               
++                       {
+                                shouldRemove = true;
++                               removeReason = "Thrown into hopper";
+                                break;
+                        }
+                }
 @@ -336,14 +337,18 @@ public class AkumaNoMiItem extends Item implements IFruitColor
  
  		List<Entity> hopperMinecarts = WyHelper.getNearbyEntities(entity.blockPosition(), entity.level, 0.5, null, HopperMinecartEntity.class);
@@ -863,7 +880,7 @@ rename to src/main/java/xyz/pixelatedw/mineminenomi/api/events/onefruit/EatDevil
 -		if(hopperMinecarts.size() > 0)
 +		if(hopperMinecarts.size() > 0) {
  			shouldRemove = true;
-+			removeReason = "Hopper in Minecraft";
++			removeReason = "Thrown into Hopper Minecart";
 +		}
  		
  		List<Entity> foxes = WyHelper.getNearbyEntities(entity.blockPosition(), entity.level, 1.5, null, FoxEntity.class);
