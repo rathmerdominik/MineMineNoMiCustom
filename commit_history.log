@@ -1,10 +1,40 @@
-commit a3d124face9ab282d0d4f6f5f88965a29110323b (HEAD -> 0.9.5-hammer, origin/0.9.5-hammer)
+commit 83e652951301634555a55ad5aa8c202d230445c4 (HEAD -> 0.9.5-hammer, origin/0.9.5-hammer)
+Author: Drqonic <36631640+Drqonic@users.noreply.github.com>
+Date:   Thu Feb 22 17:52:13 2024 +0000
+
+    feat(AbilityProjectileEntity): Added custom iframe system for AbilityProjectileSystem
+
+commit 22a49d0a2263b7484769d1bbde621944a70dd08d
+Author: Drqonic <36631640+Drqonic@users.noreply.github.com>
+Date:   Wed Feb 21 00:15:54 2024 +0000
+
+    fix(Ability Projectiles): Removed code created from misinformation that has led to invulnerability frames being ignored.
+
+commit 86e47aef5eacf74b604328805268017c2aed0299
+Author: Drqonic <36631640+Drqonic@users.noreply.github.com>
+Date:   Tue Feb 20 21:37:48 2024 +0000
+
+    fix(Ability Projectiles): Fixed issue causing ability projectiles to not collide with blocks and entities correctly.
+
+commit a1c120892747c522b1d9d13747e98b31e0afee8c
+Author: Drqonic <36631640+Drqonic@users.noreply.github.com>
+Date:   Tue Feb 20 21:37:19 2024 +0000
+
+    fix(Ability Projectiles): Fixed issue causing ability projectiles to modify iframes at the wrong time.
+
+commit ba8467a0e13260c293e628ff5d3ced7b95b39d41
+Author: Drqonic <36631640+Drqonic@users.noreply.github.com>
+Date:   Tue Feb 20 21:35:14 2024 +0000
+
+    fix(Explosion Damage): Fixed continuous damage caused by explosions after the initial damage phase.
+
+commit a3d124face9ab282d0d4f6f5f88965a29110323b
 Author: DerHammerclock <rathmerdominik@outlook.de>
 Date:   Tue Dec 5 16:56:05 2023 +0100
 
     fix(AkumaNoMiItem): Add remove reason to Hopper
 
-commit dc3d4eef0970678da0397060bb3cb47a0287ae7b (HEAD -> feat/onefruit/added-events-for-all-states, origin/feat/onefruit/added-events-for-all-states)
+commit dc3d4eef0970678da0397060bb3cb47a0287ae7b
 Author: DerHammerclock <rathmerdominik@outlook.de>
 Date:   Sun Dec 3 17:35:16 2023 +0100
 

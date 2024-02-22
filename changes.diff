@@ -13,6 +13,619 @@ index fc91367cf..9bd9f6832 100644
  # gradle
  build/
  build_*/
+diff --git a/src/main/java/xyz/pixelatedw/mineminenomi/api/abilities/ExplosionAbility.java b/src/main/java/xyz/pixelatedw/mineminenomi/api/abilities/ExplosionAbility.java
+index abddfa633..a5c1fe1d3 100644
+--- a/src/main/java/xyz/pixelatedw/mineminenomi/api/abilities/ExplosionAbility.java
++++ b/src/main/java/xyz/pixelatedw/mineminenomi/api/abilities/ExplosionAbility.java
+@@ -7,6 +7,7 @@ import java.util.List;
+ import java.util.Map;
+ import java.util.Random;
+ import java.util.Set;
++import java.util.function.Predicate;
+ import java.util.stream.Collectors;
+ 
+ import com.google.common.collect.Lists;
+@@ -52,8 +53,7 @@ import xyz.pixelatedw.mineminenomi.init.ModTags;
+ import xyz.pixelatedw.mineminenomi.particles.effects.ParticleEffect;
+ import xyz.pixelatedw.mineminenomi.wypi.WyHelper;
+ 
+-public class ExplosionAbility extends Explosion
+-{
++public class ExplosionAbility extends Explosion {
+ 	private World world;
+ 	private Entity exploder;
+ 	private double explosionX;
+@@ -72,8 +72,10 @@ public class ExplosionAbility extends Explosion
+ 	private boolean canDestroyBlocks = true;
+ 	private boolean canDropBlocksAfterExplosion = false;
+ 	private boolean canDamageEntities = true;
++	private boolean checkForFaction = true;
+ 	private boolean canDamageOwner = false;
+-	private boolean canAlwaysDamage = true;
++	private boolean canAlwaysDamage = false;
++	private boolean canDamageOnce = true;
+ 	private boolean canProduceExplosionSound = true;
+ 	private boolean protectOwnerFromFalling = false;
+ 	private boolean canCauseKnockback = true;
+@@ -84,12 +86,15 @@ public class ExplosionAbility extends Explosion
+ 	private int explodedBlocksLimit;
+ 	private int size = 52;
+ 	private int explodedBlocks;
+-	public ArrayList<Entity> immuneEntities = new ArrayList();
+-	public ArrayList<Entity> damagedEntities = new ArrayList();
++	
++	public ArrayList<Entity> immuneEntities = new ArrayList<>();
++	public ArrayList<Entity> damagedEntities = new ArrayList<>();
++	
++	private static final ArrayList<Entity> DAMAGED_ENTITIES = new ArrayList<>();
+ 
+-	public ExplosionAbility(Entity entity, World world, double posX, double posY, double posZ, float power)
+-	{
+-		super(world, entity, (DamageSource)null, (ExplosionContext)null, posX, posY, posZ, power, false, Mode.DESTROY);
++	public ExplosionAbility(Entity entity, World world, double posX, double posY, double posZ, float power) {
++		super(world, entity, (DamageSource) null, (ExplosionContext) null, posX, posY, posZ, power, false, Mode.DESTROY);
++		
+ 		this.world = world;
+ 		this.exploder = entity;
+ 		this.explosionSize = power;
+@@ -100,179 +105,170 @@ public class ExplosionAbility extends Explosion
+ 		this.damageSource = DamageSource.explosion(this);
+ 	}
+ 
+-	public void setExplosionPos(double posX, double posY, double posZ)
+-	{
++	public void setExplosionPos(double posX, double posY, double posZ) {
+ 		this.explosionX = posX;
+ 		this.explosionY = posY;
+ 		this.explosionZ = posZ;
+ 	}
+ 	
+-	public void setExplosionSize(float explosionSize)
+-	{
++	public void setExplosionSize(float explosionSize) {
+ 		this.explosionSize = explosionSize;
+ 	}
+ 	
+-	public void setExplodedBlocksLimit(int limit)
+-	{
++	public void setExplodedBlocksLimit(int limit) {
+ 		this.explodedBlocksLimit = limit;
+ 	}
+ 	
+-	public double getStaticDamage()
+-	{
++	public double getStaticDamage() {
+ 		return this.staticDamage;
+ 	}
+ 
+-	public void setStaticDamage(float damage)
+-	{
++	public void setStaticDamage(float damage) {
+ 		this.staticDamage = damage;
+ 	}
+ 
+-	public double getStaticBlockResistance()
+-	{
++	public double getStaticBlockResistance() {
+ 		return this.staticBlockResistance;
+ 	}
+ 
+-	public void setStaticBlockResistance(float damage)
+-	{
++	public void setStaticBlockResistance(float damage) {
+ 		this.staticBlockResistance = damage;
+ 	}
+ 
+-	public void setHeightDifference(int heightDifference)
+-	{
++	public void setHeightDifference(int heightDifference) {
+ 		this.heightDifference = heightDifference;
+ 	}
+ 
+-	public void setDamageOwner(boolean damageOwner)
+-	{
++	public void setDamageOwner(boolean damageOwner) {
+ 		this.canDamageOwner = damageOwner;
+ 	}
+ 
+-	public void setDamageEntities(boolean damageEntities)
+-	{
++	public void setDamageEntities(boolean damageEntities) {
+ 		this.canDamageEntities = damageEntities;
+ 	}
++	
++	public void ignoreFactionChecks() {
++		this.checkForFaction = false;
++	}
+ 
+-	public void setDropBlocksAfterExplosion(boolean canDrop)
+-	{
++	public void setDropBlocksAfterExplosion(boolean canDrop) {
+ 		this.canDropBlocksAfterExplosion = canDrop;
+ 	}
+ 
+-	public void setFireAfterExplosion(boolean hasFire)
+-	{
++	public void setFireAfterExplosion(boolean hasFire) {
+ 		this.canStartFireAfterExplosion = hasFire;
+ 	}
+ 
+-	public void setDestroyBlocks(boolean canDestroyBlocks)
+-	{
++	public void setDestroyBlocks(boolean canDestroyBlocks) {
+ 		this.canDestroyBlocks = canDestroyBlocks;
+ 	}
+ 
+-	public void setSmokeParticles(ParticleEffect particle)
+-	{
++	public void setSmokeParticles(ParticleEffect particle) {
+ 		this.particles = particle;
+ 	}
+ 
+-	public boolean getAlwaysDamage()
+-	{
++	public boolean getAlwaysDamage() {
+ 		return this.canAlwaysDamage;
+ 	}
+ 
+-	public void setAlwaysDamage(boolean flag)
+-	{
++	public void setAlwaysDamage(boolean flag) {
+ 		this.canAlwaysDamage = flag;
+ 	}
++	
++	public boolean getDamageOnce() {
++		return this.canDamageOnce;
++	}
+ 
+-	public void addRemovedBlocksToList()
+-	{
++	public void setDamageOnce(boolean flag) {
++		this.canDamageOnce = flag;
++	}
++
++	public void addRemovedBlocksToList() {
+ 		this.addRemovedBlocksToList = true;
+ 	}
+ 	
+-	public void setProtectOwnerFromFalling(boolean flag)
+-	{
++	public void setProtectOwnerFromFalling(boolean flag) {
+ 		this.protectOwnerFromFalling = flag;
+ 	}
+ 
+-	public boolean hasSmokeParticles()
+-	{
++	public boolean hasSmokeParticles() {
+ 		return this.particles != null;
+ 	}
+ 
+-	public void setExplosionSound(boolean hasSound)
+-	{
++	public void setExplosionSound(boolean hasSound) {
+ 		this.canProduceExplosionSound = hasSound;
+ 	}
+ 
+-	private void resetDamage(LivingEntity entity)
+-	{
++	private void resetDamage(LivingEntity entity) {
+ 		entity.hurtTime = entity.invulnerableTime = 0;
+ 	}
+ 
+-	public void disableExplosionKnockback()
+-	{
++	public void disableExplosionKnockback() {
+ 		this.canCauseKnockback = false;
+ 	}
+ 
+ 	@Override
+-	public DamageSource getDamageSource()
+-	{
++	public DamageSource getDamageSource() {
+ 		return this.damageSource;
+ 	}
+ 
+-	public void setDamageSource(DamageSource damageSourceIn)
+-	{
++	public void setDamageSource(DamageSource damageSourceIn) {
+ 		this.damageSource = damageSourceIn;
+ 	}
+ 	
+-	public void doExplosion()
+-	{
++	public void doExplosion() {
+ //		boolean flag = this.exploder != null && this.exploder instanceof PlayerEntity;
+-		if ((this.heightDifference > 0 && this.exploder != null && this.exploder.getY() - this.heightDifference > this.explosionY))
++		
++		if ((this.heightDifference > 0 && this.exploder != null && this.exploder.getY() - this.heightDifference > this.explosionY)) {
+ 			return;
+-				
++		}
++
+ 		Set<BlockPos> set = Sets.newHashSet();
+ 
+ 		// this code should make the loop smaller for, well smaller explosions.
+-		if(this.size + 4 > this.explosionSize)
++		if (this.size + 4 > this.explosionSize) {
+ 			this.size = Math.max((int) (this.explosionSize + 4), 16);
++		}
+ 
+-		for (int j = 0; j < this.size; ++j)
+-		{
+-			for (int k = 0; k < this.size; ++k)
+-			{
+-				for (int l = 0; l < this.size; ++l)
+-				{
+-					if (j == 0 || j == (this.size - 1) || k == 0 || k == (this.size - 1) || l == 0 || l == (this.size - 1))
+-					{
++		for (int j = 0; j < this.size; ++j) {
++			for (int k = 0; k < this.size; ++k) {
++				for (int l = 0; l < this.size; ++l) {
++					if (j == 0 || j == (this.size - 1) || k == 0 || k == (this.size - 1) || l == 0 || l == (this.size - 1)) {
+ 						double d0 = j / (float)(this.size - 1) * 2.0F - 1.0F;
+ 						double d1 = k / (float)(this.size - 1) * 2.0F - 1.0F;
+ 						double d2 = l / (float)(this.size - 1) * 2.0F - 1.0F;
+ 						double d3 = Math.sqrt(d0 * d0 + d1 * d1 + d2 * d2);
++						
+ 						d0 = d0 / d3;
+ 						d1 = d1 / d3;
+ 						d2 = d2 / d3;
++						
+ 						float f = this.explosionSize * (0.7F + this.world.random.nextFloat() * 0.6F);
++						
+ 						double eX = this.explosionX;
+ 						double eY = this.explosionY;
+ 						double eZ = this.explosionZ;
+ 						
+-						for (float f1 = 0.3F; f > 0.0F; f -= 0.22500001F)
+-						{
++						for (float f1 = 0.3F; f > 0.0F; f -= 0.22500001F) {
+ 							BlockPos blockpos = new BlockPos(eX, eY, eZ);
++							
+ 							BlockState blockState = this.world.getBlockState(blockpos);
+ 							FluidState ifluidstate = this.world.getFluidState(blockpos);
+-							if (!blockState.isAir() || !ifluidstate.isEmpty())
+-							{
++							
++							if (!blockState.isAir() || !ifluidstate.isEmpty()) {
+ 								float f2 = Math.max(blockState.getExplosionResistance(this.world, blockpos, this), ifluidstate.getExplosionResistance(this.world, blockpos, this));
+-								if (this.exploder != null)
++								
++								if (this.exploder != null) {
+ 									f2 = this.exploder.getBlockExplosionResistance(this, this.world, blockpos, blockState, ifluidstate, f2);
++								}
+ 								
+ 								f -= this.getStaticBlockResistance() > 0 ? this.getStaticBlockResistance() : (f2 + 0.3F) * 0.3F;
+ 							}
+ 							
+-							if (f > 0.0F && (this.exploder == null || this.exploder.shouldBlockExplode(this, this.world, blockpos, blockState, f)))
+-							{
+-								if(!blockState.is(ModTags.Blocks.KAIROSEKI))
++							if (f > 0.0F && (this.exploder == null || this.exploder.shouldBlockExplode(this, this.world, blockpos, blockState, f))) {
++								if (!blockState.is(ModTags.Blocks.KAIROSEKI)) {
+ 									set.add(blockpos);
++								}
+ 							}
+ 
+ 							eX += d0 * 0.3F;
+@@ -285,95 +281,115 @@ public class ExplosionAbility extends Explosion
+ 		}
+ 
+ 		this.affectedBlockPositions.addAll(set);
++		
+ 		float size = this.explosionSize * 2.0F;
++		
+ 		List<Entity> list;
++
+ 		BlockPos explosionPos = new BlockPos(this.explosionX, this.explosionY, this.explosionZ);
+-		if(this.getExploder() instanceof LivingEntity)
+-		{
+-			list = WyHelper.getNearbyEntities(explosionPos, this.world, size, size, size, ModEntityPredicates.getEnemyFactions((LivingEntity) this.getExploder()), Entity.class);
+-		}
+-		else
+-		{
++		
++		if (this.getExploder() instanceof LivingEntity) {
++			Predicate<Entity> factionCheck = null;
++			
++			if (this.checkForFaction) {
++				factionCheck = ModEntityPredicates.getEnemyFactions((LivingEntity) this.getExploder());
++			}
++			
++			list = WyHelper.getNearbyEntities(explosionPos, this.world, size, size, size, factionCheck, Entity.class);
++		} else {
+ 			list = WyHelper.getNearbyEntities(explosionPos, this.world, size, size, size, null, Entity.class);
+ 		}
+ 		
+-		if(this.canDamageOwner)
+-		{
++		if (this.canDamageOwner) {
+ 			list.add(this.getExploder());
+ 		}
+-
++		
+ 		list = list.stream().filter((e) -> {
+-			if(e instanceof LivingEntity)
+-			{
++			if (e instanceof LivingEntity) {
+ 				DamageSource source = this.getDamageSource();
+-				if(source.getDirectEntity() != null)
+-				{
+-					return ((LivingEntity)e).canSee(source.getDirectEntity());
++				
++				if (source.getDirectEntity() != null) {
++					return ((LivingEntity) e).canSee(source.getDirectEntity());
+ 				}
+ 			}
++			
+ 			return true;
+ 		}).collect(Collectors.toList());
+-
+-		if(this.immuneEntities.size() > 0)
++		
++		if (this.immuneEntities.size() > 0) {
+ 			list.removeAll(this.immuneEntities);
+-
++		}
++		
+ 		ForgeEventFactory.onExplosionDetonate(this.world, this, list, size);
++		
+ 		Vector3d v3d = new Vector3d(this.explosionX, this.explosionY, this.explosionZ);
+-
+-		if(this.canDamageEntities)
+-		{
+-			for (int k2 = 0; k2 < list.size(); ++k2)
+-			{
++		
++		if (this.canDamageEntities) {
++			for (int k2 = 0; k2 < list.size(); ++k2) {
+ 				Entity entity = list.get(k2);
+-				if(entity == null || !entity.isAlive()) {
++				
++				if (entity == null || !entity.isAlive()) {
++					if (ExplosionAbility.DAMAGED_ENTITIES.contains(entity)) {
++						ExplosionAbility.DAMAGED_ENTITIES.remove(entity);
++					}
++					
+ 					continue;
+ 				}
+-				if (!entity.ignoreExplosion())
+-				{
++				
++				if (ExplosionAbility.DAMAGED_ENTITIES.contains(entity) && entity instanceof LivingEntity && ((LivingEntity) entity).hurtTime == 0 && entity.invulnerableTime == 0) {
++					ExplosionAbility.DAMAGED_ENTITIES.remove(entity);
++				}
++				
++				if (!entity.ignoreExplosion()) {
+ 					double distance = entity.distanceToSqr(this.explosionX, this.explosionY, this.explosionZ) / size;
+-					if (distance <= 1.0D)
+-					{
++					
++					if (distance <= 1.0D) {
+ 						double xDistance = entity.getX() - this.explosionX;
+ 						double yDistance = entity.getY() + entity.getEyeHeight() - this.explosionY;
+ 						double zDistance = entity.getZ() - this.explosionZ;
+ 						double squareDistance = MathHelper.sqrt(xDistance * xDistance + yDistance * yDistance + zDistance * zDistance);
+-						if (squareDistance != 0.0D)
+-						{
++						
++						if (squareDistance != 0.0D) {
+ 							xDistance = xDistance / squareDistance;
+ 							yDistance = yDistance / squareDistance;
+ 							zDistance = zDistance / squareDistance;
+ 
+ 							double blockDensity = this.getStaticBlockResistance() > 0 ? 0 : Explosion.getSeenPercent(v3d, entity);
+-							double power = (1.0D - distance) * blockDensity;			
++							double power = (1.0D - distance) * blockDensity;
+ 							
+-							if (entity instanceof LivingEntity && this.getAlwaysDamage())
++							if (entity instanceof LivingEntity && (this.getAlwaysDamage() || !ExplosionAbility.DAMAGED_ENTITIES.contains(entity) && this.getDamageOnce())) {
+ 								this.resetDamage((LivingEntity) entity);
++							}
+ 
+-							if (this.staticDamage > 0)
+-							{
+-								if(entity.hurt(this.getDamageSource(), this.staticDamage))
++							if (this.staticDamage > 0.0F) {
++								if (entity.hurt(this.getDamageSource(), this.staticDamage)) {
+ 									this.damagedEntities.add(entity);
+-							}
+-							else
+-							{
++									
++									ExplosionAbility.DAMAGED_ENTITIES.add(entity);
++								}
++							} else {
+ 								float damage = ((float) ((power * power + power) / 2.0D * 7.0D * size + 1.0D));
+-								if(entity.hurt(this.getDamageSource(), damage))
++								
++								if (entity.hurt(this.getDamageSource(), damage)) {
+ 									this.damagedEntities.add(entity);
++									
++									ExplosionAbility.DAMAGED_ENTITIES.add(entity);
++								}
+ 							}
+ 							
+ 							double blastDamageReduction = power;
+ 
+-							if (entity instanceof LivingEntity)
++							if (entity instanceof LivingEntity) {
+ 								blastDamageReduction = ProtectionEnchantment.getExplosionKnockbackAfterDampener((LivingEntity) entity, power);
++							}
+ 							
+-							if(this.canCauseKnockback)
+-							{
++							if (this.canCauseKnockback) 	{
+ 								entity.setDeltaMovement(entity.getDeltaMovement().add(xDistance * blastDamageReduction, yDistance * blastDamageReduction, zDistance * blastDamageReduction));
+-								if (entity instanceof PlayerEntity)
+-								{
++								
++								if (entity instanceof PlayerEntity) {
+ 									PlayerEntity playerEntity = (PlayerEntity) entity;
+-									if (!playerEntity.isSpectator() && (!playerEntity.isCreative() || !playerEntity.abilities.flying))
+-									{
++									
++									if (!playerEntity.isSpectator() && (!playerEntity.isCreative() || !playerEntity.abilities.flying)) {
+ 										this.playerKnockbackMap.put(playerEntity, new Vector3d(xDistance * power, yDistance * power, zDistance * power));
+ 									}
+ 								}
+@@ -384,24 +400,27 @@ public class ExplosionAbility extends Explosion
+ 			}
+ 		}
+ 
+-		if (this.canProduceExplosionSound)
++		if (this.canProduceExplosionSound) {
+ 			this.world.playSound((PlayerEntity) null, this.explosionX, this.explosionY, this.explosionZ, SoundEvents.GENERIC_EXPLODE, SoundCategory.BLOCKS, 4.0F, (1.0F + (this.world.random.nextFloat() - this.world.random.nextFloat()) * 0.2F) * 0.7F);
++		}
+ 
+-		if (this.hasSmokeParticles())
+-			this.particles.spawn(this.world, this.explosionX, this.explosionY, this.explosionZ, 0, 0, 0);
+-		//	ModNetwork.sendToAllAround(new SParticlesPacket(this.smokeParticles, this.explosionX, this.explosionY, this.explosionZ), (LivingEntity) this.exploder);
+-
+-		if (this.canDestroyBlocks && CommonConfig.INSTANCE.isAbilityGriefingEnabled() && (this.explodedBlocksLimit <= 0 || this.explodedBlocks < this.explodedBlocksLimit))
+-		{
++		if (this.hasSmokeParticles()) {
++			this.particles.spawn(this.world, this.explosionX, this.explosionY, this.explosionZ, 0.0D, 0.0D, 0.0D);
++			
++//			ModNetwork.sendToAllAround(new SParticlesPacket(this.smokeParticles, this.explosionX, this.explosionY, this.explosionZ), (LivingEntity) this.exploder);
++		}
++		
++		if (this.canDestroyBlocks && CommonConfig.INSTANCE.isAbilityGriefingEnabled() && (this.explodedBlocksLimit <= 0 || this.explodedBlocks < this.explodedBlocksLimit)) {
+ 			ObjectArrayList<Pair<ItemStack, BlockPos>> objectarraylist = new ObjectArrayList<>();
++			
+ 			Collections.shuffle(this.affectedBlockPositions, this.world.random);
+ 
+-			for (BlockPos blockpos : this.affectedBlockPositions)
+-			{
++			for (BlockPos blockpos : this.affectedBlockPositions) {
+ 				BlockState blockstate = this.world.getBlockState(blockpos);
+ 
+-				if(blockstate.getMaterial() == Material.WATER && !CommonConfig.INSTANCE.getDestroyWater())
++				if (blockstate.getMaterial() == Material.WATER && !CommonConfig.INSTANCE.getDestroyWater()) {
+ 					continue;
++				}
+ 
+ 				boolean blockIsKairoseki = KairosekiBlockProtectionRule.INSTANCE.isBanned(blockstate);
+ 				boolean blockIsRestricted = RestrictedBlockProtectionRule.INSTANCE.isBanned(blockstate);
+@@ -409,76 +428,80 @@ public class ExplosionAbility extends Explosion
+ //				boolean inProtectedAreaFlag = ProtectedAreasData.get(this.world).isInsideRestrictedArea(blockpos.getX(), blockpos.getY(), blockpos.getZ());
+ 
+ 				boolean fallingProtection = true;
+-				if(this.protectOwnerFromFalling && this.exploder != null)
++				
++				if (this.protectOwnerFromFalling && this.exploder != null) {
+ 					fallingProtection = Math.sqrt(this.exploder.distanceToSqr(blockpos.getX(), this.exploder.getY(), blockpos.getZ())) > 1.5F;
+-
+-				if (!blockstate.isAir() && !blockIsKairoseki && !blockIsRestricted && !hardBlockRestriction && fallingProtection)
+-				{
+-					if (this.world instanceof ServerWorld && blockstate.canDropFromExplosion(this.world, blockpos, this))
+-					{
++				}
++				
++				if (!blockstate.isAir() && !blockIsKairoseki && !blockIsRestricted && !hardBlockRestriction && fallingProtection) {
++					if (this.world instanceof ServerWorld && blockstate.canDropFromExplosion(this.world, blockpos, this)) {
+ 						TileEntity tileentity = blockstate.hasTileEntity() ? this.world.getBlockEntity(blockpos) : null;
++						
+ 						LootContext.Builder lootcontext$builder = (new LootContext.Builder((ServerWorld) this.world)).withRandom(this.world.random).withParameter(LootParameters.ORIGIN, Vector3d.atCenterOf(blockpos)).withParameter(LootParameters.TOOL, ItemStack.EMPTY).withOptionalParameter(LootParameters.BLOCK_ENTITY, tileentity).withOptionalParameter(LootParameters.THIS_ENTITY, this.exploder);
++						
+ 						lootcontext$builder.withParameter(LootParameters.EXPLOSION_RADIUS, this.explosionSize);
+ 
+-						if(this.canDropBlocksAfterExplosion)
+-							blockstate.getDrops(lootcontext$builder).forEach((p_229977_2_) ->
+-									func_229976_a_(objectarraylist, p_229977_2_, blockpos));
++						if (this.canDropBlocksAfterExplosion) {
++							blockstate.getDrops(lootcontext$builder).forEach((p_229977_2_) -> func_229976_a_(objectarraylist, p_229977_2_, blockpos));
++						}
+ 
+-						if (this.addRemovedBlocksToList)
++						if (this.addRemovedBlocksToList) {
+ 							this.removedBlocks.add(new FallingBlockEntity(this.world, blockpos.getX(), blockpos.getY(), blockpos.getZ(), blockstate));
++						}
+ 					}
+ 
+ 					blockstate.onBlockExploded(this.world, blockpos, this);
+-					this.explodedBlocks++;
++					
++					++this.explodedBlocks;
+ 				}
+ 			}
+ 		}
+ 
+-		if (this.canStartFireAfterExplosion && CommonConfig.INSTANCE.isAbilityGriefingEnabled())
+-		{
++		if (this.canStartFireAfterExplosion && CommonConfig.INSTANCE.isAbilityGriefingEnabled()) {
+ 			Iterator<BlockPos> positions = this.affectedBlockPositions.iterator();
+-			while(positions.hasNext())
+-			{
++			
++			while (positions.hasNext()) {
+ 				BlockPos blockpos1 = positions.next();
++				
+ 				boolean inProtectedAreaFlag = ProtectedAreasData.get(this.world).isInsideRestrictedArea(blockpos1.getX(), blockpos1.getY(), blockpos1.getZ());
+ 
+-				if (this.world.getBlockState(blockpos1).isAir() && this.world.getBlockState(blockpos1.below()).isSolidRender(this.world, blockpos1.below()) && this.random.nextInt(5) == 0 && !inProtectedAreaFlag)
+-				{
++				if (this.world.getBlockState(blockpos1).isAir() && this.world.getBlockState(blockpos1.below()).isSolidRender(this.world, blockpos1.below()) && this.random.nextInt(5) == 0 && !inProtectedAreaFlag) {
+ 					this.world.setBlockAndUpdate(blockpos1, AbstractFireBlock.getState(this.world, blockpos1));
++					
+ 					positions.remove();
+ 				}
+ 			}
+ 		}
+ 		
+-		if(this.exploder instanceof ServerPlayerEntity && StructuresHelper.isInsideShip((ServerWorld) this.world, new BlockPos(v3d)))
++		if (this.exploder instanceof ServerPlayerEntity && StructuresHelper.isInsideShip((ServerWorld) this.world, new BlockPos(v3d))) {
+ 			ModAdvancements.SUBTLE_TWEAKS.trigger((ServerPlayerEntity) this.exploder);
++		}
+ 	}
+ 
+-	private static void func_229976_a_(ObjectArrayList<Pair<ItemStack, BlockPos>> drops, ItemStack itemStack, BlockPos pos)
+-	{
++	private static void func_229976_a_(ObjectArrayList<Pair<ItemStack, BlockPos>> drops, ItemStack itemStack, BlockPos pos) {
+ 		int i = drops.size();
+-
+-		for (int j = 0; j < i; ++j)
+-		{
++		
++		for (int j = 0; j < i; ++j) {
+ 			Pair<ItemStack, BlockPos> pair = drops.get(j);
++			
+ 			ItemStack itemstack = pair.getFirst();
+-			if (ItemEntity.areMergable(itemstack, itemStack))
+-			{
++			
++			if (ItemEntity.areMergable(itemstack, itemStack)) {
+ 				ItemStack itemstack1 = ItemEntity.merge(itemstack, itemStack, 16);
++				
+ 				drops.set(j, Pair.of(itemstack1, pair.getSecond()));
+-				if (itemStack.isEmpty())
+-				{
++				
++				if (itemStack.isEmpty()) {
+ 					return;
+ 				}
+ 			}
+ 		}
+-
++		
+ 		drops.add(Pair.of(itemStack, pos));
+ 	}
+ 
+ 	@Override
+-	public Map<PlayerEntity, Vector3d> getHitPlayers()
+-	{
++	public Map<PlayerEntity, Vector3d> getHitPlayers() {
+ 		return this.playerKnockbackMap;
+ 	}
+ 	
+@@ -486,5 +509,4 @@ public class ExplosionAbility extends Explosion
+ 	public List<BlockPos> getToBlow() {
+ 		return this.affectedBlockPositions;
+ 	}
+-
+-}
+\ No newline at end of file
++}
 diff --git a/src/main/java/xyz/pixelatedw/mineminenomi/api/crew/Crew.java b/src/main/java/xyz/pixelatedw/mineminenomi/api/crew/Crew.java
 index 00fb03171..4df27c887 100644
 --- a/src/main/java/xyz/pixelatedw/mineminenomi/api/crew/Crew.java
@@ -491,6 +1104,77 @@ index aa8b0b5c0..f6aa0b716 100644
  			}
  			
  			devilFruitProps.removeDevilFruit();
+diff --git a/src/main/java/xyz/pixelatedw/mineminenomi/data/entity/entitystats/EntityStatsBase.java b/src/main/java/xyz/pixelatedw/mineminenomi/data/entity/entitystats/EntityStatsBase.java
+index 5963b5bcd..5a428ba34 100644
+--- a/src/main/java/xyz/pixelatedw/mineminenomi/data/entity/entitystats/EntityStatsBase.java
++++ b/src/main/java/xyz/pixelatedw/mineminenomi/data/entity/entitystats/EntityStatsBase.java
+@@ -26,7 +26,7 @@ public class EntityStatsBase implements IEntityStats
+ {
+ 	private LivingEntity owner;
+ 	private double doriki;
+-	private int cola = 100, maxCola = 100, ultraCola = 0, loyalty = 0;
++	private int cola = 100, maxCola = 100, ultraCola = 0, loyalty = 0, invulnerableTime = 0;
+ 	private long bounty, belly, extol;
+ 	private String faction = "", race = "", subRace = "", fightingStyle = "";
+ 	private boolean hasShadow = true, hasHeart = true, inCombatMode = false, hasStrawDoll = true, isRogue = false;
+@@ -237,6 +237,21 @@ public class EntityStatsBase implements IEntityStats
+ 		this.loyalty = value;
+ 	}
+ 	
++	@Override
++	public int getInvulnerableTime() {
++		return this.invulnerableTime;
++	}
++	
++	@Override
++	public void alterInvulnerableTime(int value) {
++		this.invulnerableTime = Math.max(0, this.invulnerableTime + value);
++	}
++	
++	@Override
++	public void setInvulnerableTime(int value) {
++		this.invulnerableTime = Math.max(value, 0);
++	}
++	
+ 	/**
+ 	 * @return The marine rank of the entity or null if the entity is not a marine!
+ 	 */
+diff --git a/src/main/java/xyz/pixelatedw/mineminenomi/data/entity/entitystats/EntityStatsCapability.java b/src/main/java/xyz/pixelatedw/mineminenomi/data/entity/entitystats/EntityStatsCapability.java
+index 2fcc7a6e6..c2f4fe5bb 100644
+--- a/src/main/java/xyz/pixelatedw/mineminenomi/data/entity/entitystats/EntityStatsCapability.java
++++ b/src/main/java/xyz/pixelatedw/mineminenomi/data/entity/entitystats/EntityStatsCapability.java
+@@ -28,6 +28,7 @@ public class EntityStatsCapability
+ 				props.putInt("maxCola", instance.getMaxCola());
+ 				props.putInt("ultraCola", instance.getUltraCola());
+ 				props.putInt("loyalty", instance.getLoyalty());
++				props.putInt("invulnerableTime", instance.getInvulnerableTime());
+ 				props.putDouble("damageMultiplier", instance.getDamageMultiplier());
+ 				props.putLong("bounty", instance.getBounty());
+ 				props.putLong("belly", instance.getBelly());
+@@ -55,6 +56,7 @@ public class EntityStatsCapability
+ 				instance.setMaxCola(props.getInt("maxCola"));
+ 				instance.setUltraCola(props.getInt("ultraCola"));
+ 				instance.setLoyalty(props.getInt("loyalty"));
++				instance.setInvulnerableTime(props.getInt("invulnerableTime"));
+ 				instance.setDamageMultiplier(props.getDouble("damageMultiplier"));
+ 				instance.setBelly(props.getLong("belly"));
+ 				instance.setBounty(props.getLong("bounty"));
+diff --git a/src/main/java/xyz/pixelatedw/mineminenomi/data/entity/entitystats/IEntityStats.java b/src/main/java/xyz/pixelatedw/mineminenomi/data/entity/entitystats/IEntityStats.java
+index 745613f4e..81458c6b2 100644
+--- a/src/main/java/xyz/pixelatedw/mineminenomi/data/entity/entitystats/IEntityStats.java
++++ b/src/main/java/xyz/pixelatedw/mineminenomi/data/entity/entitystats/IEntityStats.java
+@@ -43,6 +43,11 @@ public interface IEntityStats
+ 	int getLoyalty();
+ 	boolean alterLoyalty(int value, StatChangeSource source);
+ 	void setLoyalty(int value);
++	
++	int getInvulnerableTime();
++	void alterInvulnerableTime(int value);
++	void setInvulnerableTime(int value);
++	
+ 	MarineRank getMarineRank();
+ 	boolean hasMarineRank(MarineRank rank);
+ 	RevolutionaryRank getRevolutionaryRank();
 diff --git a/src/main/java/xyz/pixelatedw/mineminenomi/data/world/ExtendedWorldData.java b/src/main/java/xyz/pixelatedw/mineminenomi/data/world/ExtendedWorldData.java
 index 391ba7c6b..0daa6dbc4 100644
 --- a/src/main/java/xyz/pixelatedw/mineminenomi/data/world/ExtendedWorldData.java
@@ -550,6 +1234,368 @@ index 391ba7c6b..0daa6dbc4 100644
  		}
  	}
  	
+diff --git a/src/main/java/xyz/pixelatedw/mineminenomi/entities/projectiles/AbilityProjectileEntity.java b/src/main/java/xyz/pixelatedw/mineminenomi/entities/projectiles/AbilityProjectileEntity.java
+index e816599ab..db0538cff 100644
+--- a/src/main/java/xyz/pixelatedw/mineminenomi/entities/projectiles/AbilityProjectileEntity.java
++++ b/src/main/java/xyz/pixelatedw/mineminenomi/entities/projectiles/AbilityProjectileEntity.java
+@@ -17,6 +17,7 @@ import net.minecraft.block.Blocks;
+ import net.minecraft.entity.Entity;
+ import net.minecraft.entity.EntityType;
+ import net.minecraft.entity.LivingEntity;
++import net.minecraft.entity.projectile.ProjectileEntity;
+ import net.minecraft.entity.projectile.ThrowableEntity;
+ import net.minecraft.item.ItemStack;
+ import net.minecraft.item.ShieldItem;
+@@ -39,6 +40,7 @@ import net.minecraft.util.math.RayTraceContext.BlockMode;
+ import net.minecraft.util.math.RayTraceContext.FluidMode;
+ import net.minecraft.util.math.RayTraceResult;
+ import net.minecraft.util.math.vector.Vector3d;
++import net.minecraft.util.math.vector.Vector3i;
+ import net.minecraft.world.World;
+ import net.minecraftforge.common.MinecraftForge;
+ import net.minecraftforge.fml.common.registry.IEntityAdditionalSpawnData;
+@@ -201,34 +203,53 @@ public class AbilityProjectileEntity extends ThrowableEntity implements IEntityA
+ 				return;
+ 			}
+ 
+-			if(this.collisionSizeX > 0 && this.collisionSizeY > 0 && this.collisionSizeZ > 0)
+-			{
+-				Vector3d vec31 = new Vector3d(this.getX(), this.getY(), this.getZ());
+-				Vector3d vec3 = new Vector3d(this.getX() + this.getDeltaMovement().x, this.getY() + this.getDeltaMovement().y, this.getZ() + this.getDeltaMovement().z);
+-				RayTraceResult hit = this.level.clip(new RayTraceContext(vec3, vec31, BlockMode.OUTLINE, FluidMode.ANY, this));
+-		
+-				Predicate<Entity> predicate = ModEntityPredicates.getEnemyFactions(this.getThrower())
+-					.and(target -> {
+-						if(target instanceof LivingEntity && target.canBeCollidedWith() && target != this.getThrower())
+-							return ((LivingEntity) target).canSee(this);
+-						return true;
+-					})
+-					.and(target -> target != this);
+-				List<Entity> list = WyHelper.getNearbyEntities(this.blockPosition(), this.level, this.collisionSizeX, this.collisionSizeY, this.collisionSizeZ, predicate, Entity.class);
+-				Entity target = list.stream().findAny().orElse(null);
+-				
+-				if (target != null) {
+-					hit = new EntityRayTraceResult(target);					
++			Vector3d startPos = new Vector3d(super.getX(), super.getY(), super.getZ());
++			Vector3d endPos = new Vector3d(super.getX() + super.getDeltaMovement().x, super.getY() + super.getDeltaMovement().y, super.getZ() + super.getDeltaMovement().z);
++			
++			RayTraceResult hit = this.level.clip(new RayTraceContext(startPos, endPos, BlockMode.OUTLINE, FluidMode.ANY, this));
++			
++			Predicate<Entity> entityPredicate = target -> {
++				if(target == this) {
++					return false;
+ 				}
+-				
+-				if (hit.getType() == RayTraceResult.Type.ENTITY) {
+-					this.onHit(hit);					
++
++				if (target instanceof LivingEntity && target.canBeCollidedWith() && target != this.getThrower() && ModEntityPredicates.getEnemyFactions(this.getThrower()).test(target)) {
++					return ((LivingEntity) target).canSee(this);
++				}
++				else if(target instanceof ProjectileEntity && ((ProjectileEntity)target).getOwner() != null && ((ProjectileEntity)target).getOwner() == this.getThrower()) {
++					return false;
+ 				}
++
++				return true;
++			};
++			
++			Predicate<BlockState> blockPredicate = (state) -> {
++				return !state.isAir();
++			};
++			
++			Vector3i radius = new Vector3i(this.getBoundingBox().getXsize() / 2.0D, this.getBoundingBox().getYsize() / 2.0D, this.getBoundingBox().getZsize() / 2.0D);
++			
++			List<Entity> entityList = WyHelper.getNearbyEntities(super.blockPosition(), super.level, radius.getX(), radius.getY(), radius.getZ(), entityPredicate, Entity.class);
++			List<BlockPos> blockList = WyHelper.getNearbyBlocks(super.blockPosition(), super.level, radius.getX(), radius.getY(), radius.getZ(), blockPredicate);
++
++			Entity entityTarget = entityList.stream().findAny().orElse(null);
++			BlockPos blockTarget = blockList.stream().findAny().orElse(null);
++
++			if (entityTarget != null) {
++				hit = new EntityRayTraceResult(entityTarget);					
++			} else if (blockTarget != null) {
++				hit = new BlockRayTraceResult(new Vector3d(blockTarget.getX(), blockTarget.getY(), blockTarget.getZ()), null, blockTarget, false);
++			}
++			
++			if (hit.getType() == RayTraceResult.Type.ENTITY || hit.getType() == RayTraceResult.Type.BLOCK) {
++				this.onHit(hit);
+ 			}
+ 			
+-			if(this.tickCount % this.getTargetResetTime() == 0)
++			if(this.tickCount % this.getTargetResetTime() == 0) {
+ 				this.clearTargets();
++			}
+ 		}
++		
+ 		this.onTickEvent.onTick();
+ 	}
+ 
+@@ -387,22 +408,23 @@ public class AbilityProjectileEntity extends ThrowableEntity implements IEntityA
+ 								hitEntity.push(v3d.x, 0.1D, v3d.z);
+ 							}
+ 						}
+-
+-						if (!this.canPassThroughEntities)
+-						{
++						
++						if (this.changeHurtTime) {
++							IEntityStats entityStatsProps = EntityStatsCapability.get(hitEntity);
++							
++							entityStatsProps.setInvulnerableTime(this.hurtTime);
++							
++							hitEntity.invulnerableTime = 0;
++						}
++						
++						if (!this.canPassThroughEntities) {
+ 							this.remove();
+ 							return;
+-						}
+-						else
+-						{
++						} else {
+ 							this.targets.add(entityHit.getEntity().getId());
+ 							this.entityDamaged = false;
+ 						}
+ 					}
+-
+-					if (this.changeHurtTime) {
+-						hitEntity.invulnerableTime = this.hurtTime;						
+-					}
+ 				}
+ 				else if (entityHit.getEntity() instanceof AbilityProjectileEntity)
+ 				{
+diff --git a/src/main/java/xyz/pixelatedw/mineminenomi/entities/projectiles/gomu/GomuGomuNoBazookaProjectile.java b/src/main/java/xyz/pixelatedw/mineminenomi/entities/projectiles/gomu/GomuGomuNoBazookaProjectile.java
+index 674f9b8c5..714d5e85d 100644
+--- a/src/main/java/xyz/pixelatedw/mineminenomi/entities/projectiles/gomu/GomuGomuNoBazookaProjectile.java
++++ b/src/main/java/xyz/pixelatedw/mineminenomi/entities/projectiles/gomu/GomuGomuNoBazookaProjectile.java
+@@ -23,7 +23,6 @@ public class GomuGomuNoBazookaProjectile extends AbilityProjectileEntity
+ 
+ 		this.setDamage(20);
+ 		this.setMaxLife(5);
+-		this.setHurtTime(10);
+ 
+ 		this.setDamageSource(((AbilityDamageSource)this.getDamageSource()).setSourceElement(SourceElement.RUBBER));
+ 
+diff --git a/src/main/java/xyz/pixelatedw/mineminenomi/entities/projectiles/gomu/GomuGomuNoGrizzlyMagnumProjectile.java b/src/main/java/xyz/pixelatedw/mineminenomi/entities/projectiles/gomu/GomuGomuNoGrizzlyMagnumProjectile.java
+index 650da8c3e..653adfe52 100644
+--- a/src/main/java/xyz/pixelatedw/mineminenomi/entities/projectiles/gomu/GomuGomuNoGrizzlyMagnumProjectile.java
++++ b/src/main/java/xyz/pixelatedw/mineminenomi/entities/projectiles/gomu/GomuGomuNoGrizzlyMagnumProjectile.java
+@@ -24,7 +24,6 @@ public class GomuGomuNoGrizzlyMagnumProjectile extends AbilityProjectileEntity
+ 		this.setDamage(40);
+ 		this.setMaxLife(10);
+ 		this.setPassThroughEntities();
+-		this.setHurtTime(10);
+ 
+ 		this.setDamageSource(((AbilityDamageSource)this.getDamageSource()).setSourceElement(SourceElement.RUBBER));
+ 
+diff --git a/src/main/java/xyz/pixelatedw/mineminenomi/entities/projectiles/gomu/GomuGomuNoJetBazookaProjectile.java b/src/main/java/xyz/pixelatedw/mineminenomi/entities/projectiles/gomu/GomuGomuNoJetBazookaProjectile.java
+index e738f62ea..e1baa724b 100644
+--- a/src/main/java/xyz/pixelatedw/mineminenomi/entities/projectiles/gomu/GomuGomuNoJetBazookaProjectile.java
++++ b/src/main/java/xyz/pixelatedw/mineminenomi/entities/projectiles/gomu/GomuGomuNoJetBazookaProjectile.java
+@@ -23,7 +23,6 @@ public class GomuGomuNoJetBazookaProjectile extends AbilityProjectileEntity
+ 
+ 		this.setDamage(30);
+ 		this.setMaxLife(5);
+-		this.setHurtTime(10);
+ 
+ 		this.setDamageSource(((AbilityDamageSource)this.getDamageSource()).setSourceElement(SourceElement.RUBBER));
+ 
+diff --git a/src/main/java/xyz/pixelatedw/mineminenomi/entities/projectiles/gomu/GomuGomuNoLeoBazookaProjectile.java b/src/main/java/xyz/pixelatedw/mineminenomi/entities/projectiles/gomu/GomuGomuNoLeoBazookaProjectile.java
+index 34ca7c796..4f85f77d8 100644
+--- a/src/main/java/xyz/pixelatedw/mineminenomi/entities/projectiles/gomu/GomuGomuNoLeoBazookaProjectile.java
++++ b/src/main/java/xyz/pixelatedw/mineminenomi/entities/projectiles/gomu/GomuGomuNoLeoBazookaProjectile.java
+@@ -24,7 +24,6 @@ public class GomuGomuNoLeoBazookaProjectile extends AbilityProjectileEntity
+ 		this.setDamage(70);
+ 		this.setMaxLife(10);
+ 		this.setPassThroughEntities();
+-		this.setHurtTime(10);
+ 
+ 		this.setDamageSource(((AbilityDamageSource)this.getDamageSource()).setSourceElement(SourceElement.RUBBER));
+ 
+diff --git a/src/main/java/xyz/pixelatedw/mineminenomi/entities/projectiles/goro/LightningEntity.java b/src/main/java/xyz/pixelatedw/mineminenomi/entities/projectiles/goro/LightningEntity.java
+index 86a7f947d..71ca8f321 100644
+--- a/src/main/java/xyz/pixelatedw/mineminenomi/entities/projectiles/goro/LightningEntity.java
++++ b/src/main/java/xyz/pixelatedw/mineminenomi/entities/projectiles/goro/LightningEntity.java
+@@ -194,7 +194,6 @@ public class LightningEntity extends Entity
+ 		explosion.setDestroyBlocks(this.explosionDestroysBlocks);
+ 		explosion.setHeightDifference(this.heightDifference);
+ 		explosion.setFireAfterExplosion(true);
+-		explosion.setAlwaysDamage(true);
+ 		explosion.setSmokeParticles(new LightningExplosionParticleEffect(this.explosionSize + 1));
+ 		explosion.setExplosionSound(false);
+ 		explosion.setDamageEntities(true);
+diff --git a/src/main/java/xyz/pixelatedw/mineminenomi/entities/projectiles/pika/YasakaniNoMagatamaProjectile.java b/src/main/java/xyz/pixelatedw/mineminenomi/entities/projectiles/pika/YasakaniNoMagatamaProjectile.java
+index 74a7b41d2..d900ae5f5 100644
+--- a/src/main/java/xyz/pixelatedw/mineminenomi/entities/projectiles/pika/YasakaniNoMagatamaProjectile.java
++++ b/src/main/java/xyz/pixelatedw/mineminenomi/entities/projectiles/pika/YasakaniNoMagatamaProjectile.java
+@@ -27,7 +27,6 @@ public class YasakaniNoMagatamaProjectile extends AbilityProjectileEntity
+ 		super(PikaProjectiles.YASAKANI_NO_MAGATAMA.get(), world, player, ability);
+ 		
+ 		this.setDamage(4);
+-		this.setHurtTime(10);
+ 
+ 		this.onBlockImpactEvent = this::onBlockImpactEvent;
+ 		this.onTickEvent = this::onTickEvent;
+@@ -38,7 +37,6 @@ public class YasakaniNoMagatamaProjectile extends AbilityProjectileEntity
+ 		ExplosionAbility explosion = AbilityHelper.newExplosion(this.getThrower(), this.level, hit.getX(), hit.getY(), hit.getZ(), 3);
+ 		explosion.setStaticDamage(4);
+ 		explosion.disableExplosionKnockback();
+-		explosion.setAlwaysDamage(true);
+ 		explosion.setSmokeParticles(new CommonExplosionParticleEffect(3));
+ 		explosion.doExplosion();
+ 	}
+diff --git a/src/main/java/xyz/pixelatedw/mineminenomi/entities/projectiles/swordsman/SwordsmanProjectiles.java b/src/main/java/xyz/pixelatedw/mineminenomi/entities/projectiles/swordsman/SwordsmanProjectiles.java
+index a38e2f069..9add0fc76 100644
+--- a/src/main/java/xyz/pixelatedw/mineminenomi/entities/projectiles/swordsman/SwordsmanProjectiles.java
++++ b/src/main/java/xyz/pixelatedw/mineminenomi/entities/projectiles/swordsman/SwordsmanProjectiles.java
+@@ -14,17 +14,14 @@ import xyz.pixelatedw.mineminenomi.renderers.abilities.AbilityProjectileRenderer
+ import xyz.pixelatedw.mineminenomi.wypi.WyRegistry;
+ 
+ @Mod.EventBusSubscriber(bus = Mod.EventBusSubscriber.Bus.MOD)
+-public class SwordsmanProjectiles
+-{
+-	public static final RegistryObject<EntityType<YakkodoriProjectile>> YAKKODORI = WyRegistry.registerEntityType("Yakkodori", () -> WyRegistry.createEntityType(YakkodoriProjectile::new).sized(0.5f, 1.5f).build(ModMain.PROJECT_ID + ":yakkodori"));
+-	public static final RegistryObject<EntityType<SanbyakurokujuPoundHoProjectile>> SANBYAKUROKUJU_POUND_HO = WyRegistry.registerEntityType("Sanbyakurokuju Pound Ho", () -> WyRegistry.createEntityType(SanbyakurokujuPoundHoProjectile::new).sized(2.5f, 0.5f).build(ModMain.PROJECT_ID + ":sanbyakurokuju_pound_ho"));
++public class SwordsmanProjectiles {
++	public static final RegistryObject<EntityType<YakkodoriProjectile>> YAKKODORI = WyRegistry.registerEntityType("Yakkodori", () -> WyRegistry.createEntityType(YakkodoriProjectile::new).sized(0.5F, 3.0F).build(ModMain.PROJECT_ID + ":yakkodori"));
++	public static final RegistryObject<EntityType<SanbyakurokujuPoundHoProjectile>> SANBYAKUROKUJU_POUND_HO = WyRegistry.registerEntityType("Sanbyakurokuju Pound Ho", () -> WyRegistry.createEntityType(SanbyakurokujuPoundHoProjectile::new).sized(3.0F, 0.5F).build(ModMain.PROJECT_ID + ":sanbyakurokuju_pound_ho"));
+ 
+ 	@OnlyIn(Dist.CLIENT)
+ 	@SubscribeEvent
+-	public static void registerEntityRenderers(FMLClientSetupEvent event)
+-	{
+-		RenderingRegistry.registerEntityRenderingHandler(YAKKODORI.get(), new AbilityProjectileRenderer.Factory(new CubeModel()).setColor("#bbf7b4").setScale(.4, 6, .4).setTranslate(0, -0.1, 0));
+-		RenderingRegistry.registerEntityRenderingHandler(SANBYAKUROKUJU_POUND_HO.get(), new AbilityProjectileRenderer.Factory(new CubeModel()).setColor("#bbf7b4").setScale(6, .4, 1.5));
++	public static void registerEntityRenderers(FMLClientSetupEvent event) {
++		RenderingRegistry.registerEntityRenderingHandler(YAKKODORI.get(), new AbilityProjectileRenderer.Factory(new CubeModel()).setColor("#bbf7b4").setScale(0.5D, 6.0D, 0.5D));
++		RenderingRegistry.registerEntityRenderingHandler(SANBYAKUROKUJU_POUND_HO.get(), new AbilityProjectileRenderer.Factory(new CubeModel()).setColor("#bbf7b4").setScale(6.0D, 0.5D, 1.5D));
+ 	}
+ }
+-
+diff --git a/src/main/java/xyz/pixelatedw/mineminenomi/entities/projectiles/toriphoenix/PhoenixGoenProjectile.java b/src/main/java/xyz/pixelatedw/mineminenomi/entities/projectiles/toriphoenix/PhoenixGoenProjectile.java
+index 4e4cbecaa..c80e3b965 100644
+--- a/src/main/java/xyz/pixelatedw/mineminenomi/entities/projectiles/toriphoenix/PhoenixGoenProjectile.java
++++ b/src/main/java/xyz/pixelatedw/mineminenomi/entities/projectiles/toriphoenix/PhoenixGoenProjectile.java
+@@ -25,7 +25,6 @@ public class PhoenixGoenProjectile extends AbilityProjectileEntity
+ 		this.setDamage(10);
+ 		this.setCanGetStuckInGround();
+ 		this.setMaxLife(30);
+-		this.setHurtTime(10);
+ 		
+ 		this.lookVec = lookVec;
+ 		this.onEntityImpactEvent = this::onEntityImpactEvent;
+diff --git a/src/main/java/xyz/pixelatedw/mineminenomi/events/abilities/AbilitiesEvents.java b/src/main/java/xyz/pixelatedw/mineminenomi/events/abilities/AbilitiesEvents.java
+index 33c29f0f4..939ba9578 100644
+--- a/src/main/java/xyz/pixelatedw/mineminenomi/events/abilities/AbilitiesEvents.java
++++ b/src/main/java/xyz/pixelatedw/mineminenomi/events/abilities/AbilitiesEvents.java
+@@ -54,20 +54,27 @@ import xyz.pixelatedw.mineminenomi.data.entity.ability.AbilityDataCapability;
+ import xyz.pixelatedw.mineminenomi.data.entity.ability.IAbilityData;
+ import xyz.pixelatedw.mineminenomi.data.entity.devilfruit.DevilFruitCapability;
+ import xyz.pixelatedw.mineminenomi.data.entity.entitystats.EntityStatsCapability;
++import xyz.pixelatedw.mineminenomi.data.entity.entitystats.IEntityStats;
+ import xyz.pixelatedw.mineminenomi.entities.projectiles.AbilityProjectileEntity;
+ import xyz.pixelatedw.mineminenomi.init.ModDamageSource;
+ import xyz.pixelatedw.mineminenomi.init.ModEntityPredicates;
+ import xyz.pixelatedw.mineminenomi.wypi.WyDebug;
+ 
+ @Mod.EventBusSubscriber(modid = ModMain.PROJECT_ID)
+-public class AbilitiesEvents
+-{
++public class AbilitiesEvents {
+ 	@SubscribeEvent
+-	public static void onLivingUpdate(LivingUpdateEvent event)
+-	{
+-		if (event.getEntityLiving() instanceof PlayerEntity)
+-		{
+-			PlayerEntity player = (PlayerEntity) event.getEntityLiving();
++	public static void onLivingUpdate(LivingUpdateEvent event) {
++		LivingEntity entity = event.getEntityLiving();
++		
++		IEntityStats statsProps = EntityStatsCapability.get(entity);
++		
++		if (!entity.level.isClientSide && statsProps.getInvulnerableTime() > 0) {
++			statsProps.alterInvulnerableTime(-1);
++		}
++		
++		if (event.getEntityLiving() instanceof PlayerEntity) {
++			PlayerEntity player = (PlayerEntity) entity;
++			
+ 			IAbilityData ablProps = AbilityDataCapability.get(player);
+ 
+ 			//For debug reasons, literally a copy pasted but automated version of forge's CommandTps
+@@ -75,6 +82,7 @@ public class AbilitiesEvents
+ 				if (FGCommand.SHOW_TPS && !player.level.isClientSide && player.tickCount % 20 == 0) {
+ 					DecimalFormat TIME_FORMATTER = new DecimalFormat("########0.000");
+ 					RegistryKey<World> dim = World.OVERWORLD;
++					
+ 					long[] times = player.getServer().getTickTime(dim);
+ 
+ 					if (times == null)
+@@ -87,35 +95,31 @@ public class AbilitiesEvents
+ 
+ 					double worldTickTime = (sum / times.length) * 1.0E-6D;
+ 					double worldTPS = Math.min(1000.0 / worldTickTime, 20);
++					
+ 					player.sendMessage(new TranslationTextComponent("commands.forge.tps.summary.all", TIME_FORMATTER.format(worldTickTime), TIME_FORMATTER.format(worldTPS)), Util.NIL_UUID);
+ 				}
+ 			}
+ 			
+-			for (Ability ability : ablProps.getUnlockedAbilities())
+-			{
+-				try
+-				{
+-					if (ability instanceof PassiveAbility)
++			for (Ability ability : ablProps.getUnlockedAbilities()) {
++				try {
++					if (ability instanceof PassiveAbility) {
+ 						((PassiveAbility) ablProps.getUnlockedAbility(ability)).tick(player);
+-					else if (ability instanceof TempoAbility)
++					} else if (ability instanceof TempoAbility) {
+ 						((TempoAbility) ablProps.getUnlockedAbility(ability)).tick(player);
+-				}
+-				catch (Exception e)
+-				{
++					}
++				} catch (Exception e) {
+ 					e.printStackTrace();
++					
+ 					ability.startCooldown(player);
+ 				}
+ 			}
+ 
+-			for (Ability ability : ablProps.getEquippedAbilities())
+-			{
+-				try
+-				{
++			for (Ability ability : ablProps.getEquippedAbilities()) {
++				try {
+ 					ablProps.getEquippedAbility(ability).tick(player);
+-				}
+-				catch (Exception e)
+-				{
++				} catch (Exception e) {
+ 					e.printStackTrace();
++					
+ 					ability.startCooldown(player);
+ 				}
+ 			}
+@@ -345,7 +349,15 @@ public class AbilitiesEvents
+ 			IAbilityData ablProps = AbilityDataCapability.get(entity);
+ 			DamageSource damageSource = event.getSource();
+ 			LivingEntity sourceOwner = damageSource.getDirectEntity() instanceof LivingEntity ? (LivingEntity) damageSource.getDirectEntity() : null;
+-
++			
++			IEntityStats entityStatsProps = EntityStatsCapability.get(entity);
++			
++			if (entityStatsProps.getInvulnerableTime() > 0) {
++				event.setCanceled(true);
++				
++				return;
++			}
++			
+ 			// TODO(wynd) - Possibly removed
+ //			if (!CommonConfig.INSTANCE.isAbilityInvulnerabilityEnabled())
+ //				return;
 diff --git a/src/main/java/xyz/pixelatedw/mineminenomi/events/devilfruits/OneFruitPerWorldEvents.java b/src/main/java/xyz/pixelatedw/mineminenomi/events/devilfruits/OneFruitPerWorldEvents.java
 index 49e1e1975..273a8abff 100644
 --- a/src/main/java/xyz/pixelatedw/mineminenomi/events/devilfruits/OneFruitPerWorldEvents.java
